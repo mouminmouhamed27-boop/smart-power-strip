@@ -3,90 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ElectroNova | لوحة التحكم في المشترك الذكي</title>
-  
-  <!-- Tailwind CSS CDN -->
+  <title>ElectroNova v3.0 | لوحة التحكم في المشترك الذكي</title>
+
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <!-- Google Fonts: Cairo & Orbitron -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
-  
-  <!-- Paho MQTT Library (with CDN fallback) -->
+
+  <!-- Paho MQTT Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
   <script>
     if (typeof Paho === 'undefined') {
       document.write('<script src="https://cdn.jsdelivr.net/npm/paho-mqtt@1.0.1/mqttws31.min.js"><\/script>');
     }
   </script>
-
-  <!-- Chart.js for Live Power Graph -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
-    body {
-      font-family: 'Cairo', sans-serif;
-      background-color: #0b0f19;
-      color: #f3f4f6;
-    }
-    .font-mono-num {
-      font-family: 'Orbitron', monospace;
-    }
-    .neon-border-green {
-      box-shadow: 0 0 15px rgba(16, 185, 129, 0.25);
-    }
-    .neon-border-red {
-      box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
-    }
+    body { font-family: 'Cairo', sans-serif; background-color: #0b0f19; color: #f3f4f6; }
+    .font-mono-num { font-family: 'Orbitron', monospace; }
+    .neon-border-green { box-shadow: 0 0 15px rgba(16, 185, 129, 0.28); }
+    .neon-border-red { box-shadow: 0 0 20px rgba(239, 68, 68, 0.45); }
     .glass-card {
-      background: rgba(17, 24, 39, 0.75);
+      background: rgba(17, 24, 39, 0.78);
       backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
-    .glass-card:hover {
-      border-color: rgba(59, 130, 246, 0.3);
-    }
-    .cursor-pointer { cursor: pointer; }
-    
-    /* Dedicated smooth switch toggle in LTR coordinate space */
-    .switch-track {
-      width: 3.5rem; /* 56px */
-      height: 2rem;  /* 32px */
-      border-radius: 9999px;
-      position: relative;
-      cursor: pointer;
-      transition: background-color 0.25s ease;
-      display: inline-flex;
-      align-items: center;
-      padding: 0 4px;
-    }
-    .switch-thumb {
-      width: 1.5rem; /* 24px */
-      height: 1.5rem; /* 24px */
-      border-radius: 9999px;
-      background-color: #ffffff;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-      position: absolute;
-      left: 4px;
-    }
-    .switch-track.on {
-      background-color: #10b981; /* emerald-500 */
-    }
-    .switch-track.on .switch-thumb {
-      transform: translateX(24px);
-    }
-    .switch-track.off {
-      background-color: #374151; /* gray-700 */
-    }
-    .switch-track.off .switch-thumb {
-      transform: translateX(0);
-      background-color: #d1d5db; /* gray-300 */
-    }
+    .glass-card:hover { border-color: rgba(59, 130, 246, 0.3); }
+    input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between">
@@ -94,45 +39,44 @@
   <!-- Header -->
   <header class="glass-card sticky top-0 z-50 px-4 lg:px-8 py-3 border-b border-gray-800">
     <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
-      
-      <!-- Brand & Project Title -->
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-emerald-500 flex items-center justify-center text-white shadow-lg shadow-cyan-500/20">
           <i class="fa-solid fa-bolt text-xl"></i>
         </div>
         <div>
-          <div class="flex items-center gap-2">
-            <h1 class="text-xl font-black tracking-wide text-white">ElectroNova <span class="text-xs bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono-num">v2.1 IoT</span></h1>
-          </div>
+          <h1 class="text-xl font-black tracking-wide text-white flex items-center gap-2">
+            ElectroNova
+            <span class="text-xs bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono-num">v3.0 IoT</span>
+          </h1>
           <p class="text-xs text-gray-400">مشروع المشترك الكهربائي الذكي | كلية الهندسة جامعة الأزهر</p>
         </div>
       </div>
 
-      <!-- Cloud Status & Controls -->
-      <div class="flex items-center gap-3">
-        <!-- MQTT Connection Status (Clickable to reconnect) -->
-        <button id="connBadge" onclick="reconnectManual()" title="اضغط لإعادة الاتصال يدوياً" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-950/60 border border-yellow-700/50 text-yellow-400 text-xs font-semibold cursor-pointer transition hover:scale-105 active:scale-95">
+      <div class="flex items-center flex-wrap gap-2.5">
+        <!-- Live ESP32 NTP Clock -->
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-900/90 border border-gray-700 text-xs">
+          <i class="fa-regular fa-clock text-cyan-400"></i>
+          <span id="espClock" class="font-mono-num text-white font-bold">--:--:--</span>
+          <span id="ntpBadge" class="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400">NTP</span>
+        </div>
+
+        <!-- MQTT Status Badge -->
+        <button id="connBadge" onclick="manualReconnect()" title="اضغط لإعادة الاتصال يدوياً"
+          class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-950/60 border border-yellow-700/50 text-yellow-400 text-xs font-semibold cursor-pointer transition hover:scale-105">
           <span id="connDot" class="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-ping"></span>
           <span id="connText">جاري الاتصال بالسحابة...</span>
         </button>
 
-        <!-- Broker Indicator Badge -->
-        <div class="hidden sm:flex items-center gap-1.5 text-xs text-gray-400 px-3 py-1.5 rounded-lg bg-gray-800/60 border border-gray-700">
-          <i class="fa-solid fa-server text-cyan-400"></i>
-          <span class="font-mono-num">HiveMQ WSS:8884</span>
-        </div>
-
-        <!-- Config Modal Trigger -->
-        <button onclick="toggleConfigModal()" title="إعدادات الاتصال" class="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition">
+        <button onclick="toggleConfigModal()" title="إعدادات MQTT"
+          class="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition">
           <i class="fa-solid fa-gear"></i>
         </button>
       </div>
-
     </div>
   </header>
 
-  <!-- Emergency / Alert Banner -->
-  <div id="alertBanner" class="hidden transition-all duration-300 px-4 py-2.5 bg-red-600/90 text-white font-bold text-sm text-center flex items-center justify-center gap-3 shadow-lg neon-border-red">
+  <!-- Emergency Banner -->
+  <div id="alertBanner" class="hidden px-4 py-2.5 bg-red-600/95 text-white font-bold text-sm text-center flex items-center justify-center gap-3 shadow-lg neon-border-red">
     <i class="fa-solid fa-triangle-exclamation text-lg animate-bounce"></i>
     <span id="alertMsg">تحذير أمان عاجل!</span>
   </div>
@@ -140,11 +84,10 @@
   <!-- Main Content -->
   <main class="max-w-7xl mx-auto w-full px-4 lg:px-8 py-6 flex-1 space-y-6">
 
-    <!-- Top KPI Dashboard Grid -->
+    <!-- Top KPI Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      
-      <!-- Card 1: Temperature & Protection -->
-      <div class="glass-card rounded-2xl p-5 relative overflow-hidden transition-all">
+      <!-- Temp -->
+      <div class="glass-card rounded-2xl p-5">
         <div class="flex items-center justify-between text-gray-400 mb-2">
           <span class="text-sm font-semibold">درجة الحرارة (DHT22)</span>
           <i class="fa-solid fa-temperature-half text-amber-400 text-lg"></i>
@@ -154,16 +97,16 @@
           <span class="text-lg text-gray-400">°C</span>
         </div>
         <div class="w-full bg-gray-700/50 h-2 rounded-full mt-3 overflow-hidden">
-          <div id="barTemp" class="bg-emerald-500 h-full transition-all duration-500" style="width: 35%"></div>
+          <div id="barTemp" class="bg-emerald-500 h-full transition-all duration-500" style="width: 30%"></div>
         </div>
         <div class="flex justify-between text-[11px] text-gray-400 mt-1">
-          <span>آمن (< 60°C)</span>
+          <span>آمن (&lt; 60°C)</span>
           <span class="text-red-400">فصل أمان (65°C)</span>
         </div>
       </div>
 
-      <!-- Card 2: Total Current -->
-      <div class="glass-card rounded-2xl p-5 relative overflow-hidden">
+      <!-- Total Amps -->
+      <div class="glass-card rounded-2xl p-5">
         <div class="flex items-center justify-between text-gray-400 mb-2">
           <span class="text-sm font-semibold">إجمالي التيار الكلي</span>
           <i class="fa-solid fa-bolt-lightning text-cyan-400 text-lg"></i>
@@ -177,13 +120,13 @@
           <div id="barAmps" class="bg-cyan-500 h-full transition-all duration-500" style="width: 0%"></div>
         </div>
         <div class="flex justify-between text-[11px] text-gray-400 mt-1">
-          <span>أحمال نشطة</span>
+          <span>حمل المشترك</span>
           <span class="text-yellow-400">تخفيف أحمال عند 16A</span>
         </div>
       </div>
 
-      <!-- Card 3: Total Power (Watts) -->
-      <div class="glass-card rounded-2xl p-5 relative overflow-hidden">
+      <!-- Total Power -->
+      <div class="glass-card rounded-2xl p-5">
         <div class="flex items-center justify-between text-gray-400 mb-2">
           <span class="text-sm font-semibold">القدرة اللحظية (Watts)</span>
           <i class="fa-solid fa-gauge-high text-emerald-400 text-lg"></i>
@@ -195,19 +138,22 @@
         </div>
         <div class="flex items-center gap-2 mt-3 text-xs text-gray-400">
           <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span>الحساب التلقائي: <span class="font-mono-num">P = I × V</span></span>
+          <span>الحساب الحي من الـ ESP32</span>
         </div>
       </div>
 
-      <!-- Card 4: Energy & Estimated Cost -->
-      <div class="glass-card rounded-2xl p-5 relative overflow-hidden">
+      <!-- Cumulative Energy & Cost (From ESP32 NVS) -->
+      <div class="glass-card rounded-2xl p-5">
         <div class="flex items-center justify-between text-gray-400 mb-2">
-          <span class="text-sm font-semibold">الطاقة والفاتورة التقديرية</span>
-          <i class="fa-solid fa-coins text-yellow-400 text-lg"></i>
+          <span class="text-sm font-semibold">الطاقة التراكمية (ESP32)</span>
+          <button onclick="resetEnergy()" title="تصفير عداد الطاقة في الجهاز"
+            class="text-[11px] px-2 py-0.5 rounded bg-gray-800 hover:bg-rose-900/70 text-gray-300 hover:text-rose-300 border border-gray-700 transition">
+            <i class="fa-solid fa-rotate-left ml-1"></i>تصفير
+          </button>
         </div>
         <div class="flex items-baseline justify-between">
           <div>
-            <span id="valKwh" class="text-2xl font-black font-mono-num text-white">0.00</span>
+            <span id="valKwh" class="text-2xl font-black font-mono-num text-white">0.0000</span>
             <span class="text-xs text-gray-400">kWh</span>
           </div>
           <div class="text-left">
@@ -216,30 +162,25 @@
           </div>
         </div>
         <div class="flex justify-between text-[11px] text-gray-400 mt-3 pt-2 border-t border-gray-800">
-          <span>تعريفة الشريحة</span>
+          <span>محفوظة في NVS Flash</span>
           <span class="font-mono-num">1.25 EGP/kWh</span>
         </div>
       </div>
-
     </div>
 
-    <!-- Master Controls & Voice Simulation Toolbar -->
+    <!-- Master Controls & Voice Bar -->
     <div class="glass-card rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
-      
-      <!-- Quick Master Buttons -->
       <div class="flex items-center gap-3">
         <button onclick="sendMasterCommand(true)" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 transition active:scale-95">
           <i class="fa-solid fa-power-off"></i>
           <span>تشغيل الكل (ALL ON)</span>
         </button>
-
         <button onclick="sendMasterCommand(false)" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm shadow-lg shadow-rose-600/30 transition active:scale-95">
           <i class="fa-solid fa-ban"></i>
           <span>فصل الكل (ALL OFF)</span>
         </button>
       </div>
 
-      <!-- Simulated VC-02 Voice Control with Browser Web Speech API -->
       <div class="flex items-center gap-3 flex-wrap">
         <div class="flex items-center gap-2 text-xs text-gray-400">
           <i class="fa-solid fa-microphone text-cyan-400"></i>
@@ -249,242 +190,23 @@
           <i class="fa-solid fa-microphone-lines"></i>
           <span id="voiceStatus">تحدث الآن (صوتياً)</span>
         </button>
-        <span class="text-[11px] text-gray-500 hidden md:inline">مثال: "شغل مخرج 1" أو "all on"</span>
       </div>
-
     </div>
 
     <!-- 4 Outlets Grid -->
     <div>
-      <div class="flex items-center justify-between mb-4">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
         <h2 class="text-lg font-bold text-white flex items-center gap-2">
           <i class="fa-solid fa-sliders text-cyan-400"></i>
-          <span>التحكم في المخارج الأربعة (Outlets Management)</span>
+          <span>التحكم والجدولة اليومية للمخارج الأربعة</span>
         </h2>
-        <span class="text-xs text-gray-400">الأولوية: مخرج 1 (قصوى) ⬅ مخرج 4 (أول ما يفصل عند التحميل الزائد)</span>
+        <span class="text-xs text-gray-400">الأولوية: مخرج 1 (قصوى) ⬅ مخرج 4 (يفصل أولاً عند زيادة الحمل)</span>
       </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-        
-        <!-- Outlet 1 -->
-        <div id="cardOutlet1" class="glass-card rounded-2xl p-5 border transition-all duration-300 relative flex flex-col justify-between">
-          <div class="flex items-start justify-between mb-4">
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full bg-gray-600" id="dotOutlet1"></span>
-                <h3 class="font-bold text-white text-base">مخرج 1 (Outlet 1)</h3>
-              </div>
-              <p class="text-xs text-gray-400 mt-0.5">أولوية أساسية: خادم / شاحن رئيسي</p>
-            </div>
-            <span class="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded font-mono-num">P1 Top</span>
-          </div>
-
-          <div class="bg-gray-900/60 rounded-xl p-3 mb-4 space-y-2 border border-gray-800/80">
-            <div class="flex justify-between text-xs">
-              <span class="text-gray-400">التيار (ACS712):</span>
-              <span id="ampsOutlet1" class="font-mono-num font-bold text-cyan-400">0.0 A</span>
-            </div>
-            <div class="flex justify-between text-xs">
-              <span class="text-gray-400">القدرة:</span>
-              <span id="wattsOutlet1" class="font-mono-num font-bold text-emerald-400">0 W</span>
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between pt-2 border-t border-gray-800/80 mb-4">
-            <span class="text-sm font-semibold" id="labelOutlet1">مغلق (OFF)</span>
-            <div dir="ltr">
-              <div id="toggleTrack1" onclick="toggleOutlet(1)" class="switch-track off">
-                <div class="switch-thumb"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="pt-3 border-t border-gray-800">
-            <div class="flex items-center justify-between text-xs text-gray-400 mb-2">
-              <span>مؤقت زمني (Timer):</span>
-              <span id="timerLabel1" class="text-cyan-400 font-mono-num text-[11px]">معطل</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <select id="timerSec1" class="bg-gray-900 border border-gray-700 text-xs rounded-lg px-2 py-1.5 text-gray-300 flex-1 focus:border-cyan-500">
-                <option value="10">10 ثواني (اختبار)</option>
-                <option value="60">1 دقيقة</option>
-                <option value="300">5 دقائق</option>
-                <option value="1800">30 دقيقة</option>
-                <option value="3600">1 ساعة</option>
-              </select>
-              <button onclick="setOutletTimer(1)" class="px-3 py-1.5 rounded-lg bg-cyan-900/80 hover:bg-cyan-800 border border-cyan-700 text-cyan-300 text-xs font-bold transition">
-                ضبط
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Outlet 2 -->
-        <div id="cardOutlet2" class="glass-card rounded-2xl p-5 border transition-all duration-300 relative flex flex-col justify-between">
-          <div class="flex items-start justify-between mb-4">
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full bg-gray-600" id="dotOutlet2"></span>
-                <h3 class="font-bold text-white text-base">مخرج 2 (Outlet 2)</h3>
-              </div>
-              <p class="text-xs text-gray-400 mt-0.5">أجهزة مكتبية / كمبيوتر</p>
-            </div>
-            <span class="text-[10px] bg-blue-950 text-blue-400 border border-blue-800 px-2 py-0.5 rounded font-mono-num">P2 High</span>
-          </div>
-
-          <div class="bg-gray-900/60 rounded-xl p-3 mb-4 space-y-2 border border-gray-800/80">
-            <div class="flex justify-between text-xs">
-              <span class="text-gray-400">التيار (ACS712):</span>
-              <span id="ampsOutlet2" class="font-mono-num font-bold text-cyan-400">0.0 A</span>
-            </div>
-            <div class="flex justify-between text-xs">
-              <span class="text-gray-400">القدرة:</span>
-              <span id="wattsOutlet2" class="font-mono-num font-bold text-emerald-400">0 W</span>
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between pt-2 border-t border-gray-800/80 mb-4">
-            <span class="text-sm font-semibold" id="labelOutlet2">مغلق (OFF)</span>
-            <div dir="ltr">
-              <div id="toggleTrack2" onclick="toggleOutlet(2)" class="switch-track off">
-                <div class="switch-thumb"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="pt-3 border-t border-gray-800">
-            <div class="flex items-center justify-between text-xs text-gray-400 mb-2">
-              <span>مؤقت زمني (Timer):</span>
-              <span id="timerLabel2" class="text-cyan-400 font-mono-num text-[11px]">معطل</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <select id="timerSec2" class="bg-gray-900 border border-gray-700 text-xs rounded-lg px-2 py-1.5 text-gray-300 flex-1 focus:border-cyan-500">
-                <option value="10">10 ثواني (اختبار)</option>
-                <option value="60">1 دقيقة</option>
-                <option value="300">5 دقائق</option>
-                <option value="1800">30 دقيقة</option>
-                <option value="3600">1 ساعة</option>
-              </select>
-              <button onclick="setOutletTimer(2)" class="px-3 py-1.5 rounded-lg bg-cyan-900/80 hover:bg-cyan-800 border border-cyan-700 text-cyan-300 text-xs font-bold transition">
-                ضبط
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Outlet 3 -->
-        <div id="cardOutlet3" class="glass-card rounded-2xl p-5 border transition-all duration-300 relative flex flex-col justify-between">
-          <div class="flex items-start justify-between mb-4">
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full bg-gray-600" id="dotOutlet3"></span>
-                <h3 class="font-bold text-white text-base">مخرج 3 (Outlet 3)</h3>
-              </div>
-              <p class="text-xs text-gray-400 mt-0.5">أجهزة طرفية / إضاءة</p>
-            </div>
-            <span class="text-[10px] bg-yellow-950 text-yellow-400 border border-yellow-800 px-2 py-0.5 rounded font-mono-num">P3 Med</span>
-          </div>
-
-          <div class="bg-gray-900/60 rounded-xl p-3 mb-4 space-y-2 border border-gray-800/80">
-            <div class="flex justify-between text-xs">
-              <span class="text-gray-400">التيار (ACS712):</span>
-              <span id="ampsOutlet3" class="font-mono-num font-bold text-cyan-400">0.0 A</span>
-            </div>
-            <div class="flex justify-between text-xs">
-              <span class="text-gray-400">القدرة:</span>
-              <span id="wattsOutlet3" class="font-mono-num font-bold text-emerald-400">0 W</span>
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between pt-2 border-t border-gray-800/80 mb-4">
-            <span class="text-sm font-semibold" id="labelOutlet3">مغلق (OFF)</span>
-            <div dir="ltr">
-              <div id="toggleTrack3" onclick="toggleOutlet(3)" class="switch-track off">
-                <div class="switch-thumb"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="pt-3 border-t border-gray-800">
-            <div class="flex items-center justify-between text-xs text-gray-400 mb-2">
-              <span>مؤقت زمني (Timer):</span>
-              <span id="timerLabel3" class="text-cyan-400 font-mono-num text-[11px]">معطل</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <select id="timerSec3" class="bg-gray-900 border border-gray-700 text-xs rounded-lg px-2 py-1.5 text-gray-300 flex-1 focus:border-cyan-500">
-                <option value="10">10 ثواني (اختبار)</option>
-                <option value="60">1 دقيقة</option>
-                <option value="300">5 دقائق</option>
-                <option value="1800">30 دقيقة</option>
-                <option value="3600">1 ساعة</option>
-              </select>
-              <button onclick="setOutletTimer(3)" class="px-3 py-1.5 rounded-lg bg-cyan-900/80 hover:bg-cyan-800 border border-cyan-700 text-cyan-300 text-xs font-bold transition">
-                ضبط
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Outlet 4 -->
-        <div id="cardOutlet4" class="glass-card rounded-2xl p-5 border transition-all duration-300 relative flex flex-col justify-between">
-          <div class="flex items-start justify-between mb-4">
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full bg-gray-600" id="dotOutlet4"></span>
-                <h3 class="font-bold text-white text-base">مخرج 4 (Outlet 4)</h3>
-              </div>
-              <p class="text-xs text-gray-400 mt-0.5">أحمال غير حرجة (شواحن إضافية)</p>
-            </div>
-            <span class="text-[10px] bg-red-950 text-red-400 border border-red-800 px-2 py-0.5 rounded font-mono-num">P4 Shed 1st</span>
-          </div>
-
-          <div class="bg-gray-900/60 rounded-xl p-3 mb-4 space-y-2 border border-gray-800/80">
-            <div class="flex justify-between text-xs">
-              <span class="text-gray-400">التيار (ACS712):</span>
-              <span id="ampsOutlet4" class="font-mono-num font-bold text-cyan-400">0.0 A</span>
-            </div>
-            <div class="flex justify-between text-xs">
-              <span class="text-gray-400">القدرة:</span>
-              <span id="wattsOutlet4" class="font-mono-num font-bold text-emerald-400">0 W</span>
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between pt-2 border-t border-gray-800/80 mb-4">
-            <span class="text-sm font-semibold" id="labelOutlet4">مغلق (OFF)</span>
-            <div dir="ltr">
-              <div id="toggleTrack4" onclick="toggleOutlet(4)" class="switch-track off">
-                <div class="switch-thumb"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="pt-3 border-t border-gray-800">
-            <div class="flex items-center justify-between text-xs text-gray-400 mb-2">
-              <span>مؤقت زمني (Timer):</span>
-              <span id="timerLabel4" class="text-cyan-400 font-mono-num text-[11px]">معطل</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <select id="timerSec4" class="bg-gray-900 border border-gray-700 text-xs rounded-lg px-2 py-1.5 text-gray-300 flex-1 focus:border-cyan-500">
-                <option value="10">10 ثواني (اختبار)</option>
-                <option value="60">1 دقيقة</option>
-                <option value="300">5 دقائق</option>
-                <option value="1800">30 دقيقة</option>
-                <option value="3600">1 ساعة</option>
-              </select>
-              <button onclick="setOutletTimer(4)" class="px-3 py-1.5 rounded-lg bg-cyan-900/80 hover:bg-cyan-800 border border-cyan-700 text-cyan-300 text-xs font-bold transition">
-                ضبط
-              </button>
-            </div>
-          </div>
-        </div>
-
-      </div>
+      <div id="outletsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5"></div>
     </div>
 
-    <!-- Live Power Chart & Real-Time JSON Log Console -->
+    <!-- Chart & Live Console -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
-      <!-- Live Real-Time Power Chart (Chart.js) -->
       <div class="lg:col-span-2 glass-card rounded-2xl p-5">
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-2">
@@ -493,12 +215,9 @@
           </div>
           <span class="text-xs text-gray-400 font-mono-num">تحديث كل 4 ثوانٍ</span>
         </div>
-        <div class="h-56 w-full">
-          <canvas id="powerChart"></canvas>
-        </div>
+        <div class="h-56 w-full"><canvas id="powerChart"></canvas></div>
       </div>
 
-      <!-- Live Telemetry / MQTT Event Log -->
       <div class="glass-card rounded-2xl p-5 flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between mb-3">
@@ -509,75 +228,58 @@
             <button onclick="clearLogs()" class="text-[11px] text-gray-400 hover:text-white">مسح</button>
           </div>
           <div id="logConsole" class="bg-gray-950 rounded-xl p-3 h-44 overflow-y-auto font-mono-num text-[11px] text-gray-300 space-y-1.5 border border-gray-800">
-            <div class="text-cyan-400">> تم تهيئة النظام... جاري الاتصال بالسحابة...</div>
+            <div class="text-cyan-400">&gt; تهيئة لوحة التحكم v3.0...</div>
           </div>
         </div>
-        <div class="mt-3 pt-2 border-t border-gray-800 text-[11px] text-gray-500 flex justify-between">
-          <span>الموضوع: <code class="text-cyan-400 font-mono">electronova/smartstrip/status</code></span>
+        <div class="mt-3 pt-2 border-t border-gray-800 text-[11px] text-gray-500">
+          <span>Topic: <code id="lblStatusTopic" class="text-cyan-400 font-mono">electronova/smartstrip/status</code></span>
         </div>
       </div>
-
     </div>
-
   </main>
 
   <!-- Footer -->
   <footer class="glass-card border-t border-gray-800/80 px-4 py-3 mt-6">
     <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between text-xs text-gray-400 gap-2">
-      <div>
-        <span>مشروع المعمل المشترك الذكي © 2026</span>
-        <span class="mx-2">•</span>
-        <span class="text-gray-300">ESP32 + MQTT Cloud + Load Shedding + Thermal Protection</span>
-      </div>
-      <div>
-        <span>الخادم: <span class="text-cyan-400 font-mono-num">broker.hivemq.com (Port 8884 TLS)</span></span>
-      </div>
+      <span>ElectroNova Team © 2026 • ESP32 + MQTT + NTP Scheduler + Per-Outlet kWh</span>
+      <span class="font-mono-num text-cyan-400" id="lblBrokerFooter">broker.hivemq.com:8884</span>
     </div>
   </footer>
 
-  <!-- Settings / Connection Modal -->
+  <!-- Settings Modal -->
   <div id="configModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
       <div class="flex items-center justify-between border-b border-gray-800 pb-3">
-        <h3 class="font-bold text-white text-base flex items-center gap-2">
-          <i class="fa-solid fa-sliders text-cyan-400"></i>
-          <span>إعدادات الاتصال بالسحابة (MQTT Broker)</span>
-        </h3>
-        <button onclick="toggleConfigModal()" class="text-gray-400 hover:text-white">
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
+        <h3 class="font-bold text-white text-base"><i class="fa-solid fa-sliders text-cyan-400 ml-2"></i>إعدادات MQTT Broker</h3>
+        <button onclick="toggleConfigModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
-
       <div class="space-y-3 text-xs">
         <div>
-          <label class="block text-gray-400 mb-1">عنوان خادم MQTT (Broker Host):</label>
+          <label class="block text-gray-400 mb-1">Broker Host:</label>
           <input type="text" id="cfgBroker" value="broker.hivemq.com" class="w-full bg-gray-950 border border-gray-700 rounded-lg p-2.5 text-white font-mono-num">
         </div>
-
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-gray-400 mb-1">منفذ الويب (WS Port):</label>
+            <label class="block text-gray-400 mb-1">WS Port:</label>
             <input type="number" id="cfgPort" value="8884" class="w-full bg-gray-950 border border-gray-700 rounded-lg p-2.5 text-white font-mono-num">
           </div>
           <div>
-            <label class="block text-gray-400 mb-1">تشفير SSL/TLS:</label>
+            <label class="block text-gray-400 mb-1">SSL/TLS:</label>
             <select id="cfgSsl" class="w-full bg-gray-950 border border-gray-700 rounded-lg p-2.5 text-white">
-              <option value="true" selected>نعم (WSS - منفذ 8884)</option>
+              <option value="true" selected>نعم (WSS 8884)</option>
+              <option value="false">لا (WS 8000)</option>
             </select>
           </div>
         </div>
-
         <div>
-          <label class="block text-gray-400 mb-1">موضوع استقبال الحالة (Status Topic):</label>
+          <label class="block text-gray-400 mb-1">Status Topic:</label>
           <input type="text" id="cfgTopicStatus" value="electronova/smartstrip/status" class="w-full bg-gray-950 border border-gray-700 rounded-lg p-2.5 text-white font-mono-num">
         </div>
-
         <div>
-          <label class="block text-gray-400 mb-1">موضوع إرسال الأوامر (Command Topic):</label>
+          <label class="block text-gray-400 mb-1">Command Topic:</label>
           <input type="text" id="cfgTopicCmd" value="electronova/smartstrip/cmd" class="w-full bg-gray-950 border border-gray-700 rounded-lg p-2.5 text-white font-mono-num">
         </div>
       </div>
-
       <div class="pt-3 border-t border-gray-800 flex justify-end gap-3">
         <button onclick="toggleConfigModal()" class="px-4 py-2 rounded-lg bg-gray-800 text-gray-300 text-xs">إلغاء</button>
         <button onclick="saveAndReconnectMQTT()" class="px-5 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs">حفظ وإعادة الاتصال</button>
@@ -585,32 +287,122 @@
     </div>
   </div>
 
-  <!-- JavaScript Logic -->
   <script>
-    // System Configurations - Pinned to 8884 TLS
+    const OUTLET_META = [
+      { id: 1, sub: "أولوية قصوى: راوتر / جهاز أساسي", badge: "P1 Top", badgeCls: "bg-emerald-950 text-emerald-400 border-emerald-800" },
+      { id: 2, sub: "أجهزة مكتبية / كمبيوتر", badge: "P2 High", badgeCls: "bg-blue-950 text-blue-400 border-blue-800" },
+      { id: 3, sub: "أجهزة طرفية / إضاءة", badge: "P3 Med", badgeCls: "bg-yellow-950 text-yellow-400 border-yellow-800" },
+      { id: 4, sub: "أحمال غير حرجة (شواحن إضافية)", badge: "P4 Shed 1st", badgeCls: "bg-red-950 text-red-400 border-red-800" }
+    ];
+
     let config = {
       broker: "broker.hivemq.com",
       port: 8884,
       useSSL: true,
       path: "/mqtt",
       topicStatus: "electronova/smartstrip/status",
-      topicCmd: "electronova/smartstrip/cmd",
-      clientId: "WebDashboard_" + Math.random().toString(16).substr(2, 8)
+      topicCmd: "electronova/smartstrip/cmd"
     };
 
-    // State Variables
     let client = null;
-    let outletStates = [false, false, false, false];
-    let totalKwh = 0.0;
-    let lastWatts = 0;
-    let lastTimeSec = Date.now() / 1000;
-    const EGP_PER_KWH = 1.25;
     let reconnectTimer = null;
     let isConnecting = false;
+    let outletStates = [false, false, false, false];
+    let pendingStateUntil = [0, 0, 0, 0];
+    let scheduleEditLockUntil = [0, 0, 0, 0];
 
-    // Chart Setup
-    let powerChart;
-    const maxChartDataPoints = 15;
+    let powerChart = null;
+    const maxChartPoints = 15;
+
+    function renderOutletCards() {
+      const container = document.getElementById("outletsContainer");
+      container.innerHTML = OUTLET_META.map(m => `
+        <div id="cardOutlet${m.id}" class="glass-card rounded-2xl p-5 border border-transparent transition-all duration-300 flex flex-col justify-between gap-3">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-gray-600" id="dotOutlet${m.id}"></span>
+                <h3 class="font-bold text-white text-base">مخرج ${m.id} (Outlet ${m.id})</h3>
+              </div>
+              <p class="text-xs text-gray-400 mt-0.5">${m.sub}</p>
+            </div>
+            <span class="text-[10px] border px-2 py-0.5 rounded font-mono-num ${m.badgeCls}">${m.badge}</span>
+          </div>
+
+          <!-- Per-Outlet Live Metrics -->
+          <div class="bg-gray-900/70 rounded-xl p-3 space-y-1.5 border border-gray-800/80 text-xs">
+            <div class="flex justify-between">
+              <span class="text-gray-400">التيار (ACS712):</span>
+              <span id="ampsOutlet${m.id}" class="font-mono-num font-bold text-cyan-400">0.0 A</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">القدرة اللحظية:</span>
+              <span id="wattsOutlet${m.id}" class="font-mono-num font-bold text-emerald-400">0 W</span>
+            </div>
+            <div class="flex justify-between pt-1 border-t border-gray-800">
+              <span class="text-gray-400">الاستهلاك التراكمي:</span>
+              <span id="kwhOutlet${m.id}" class="font-mono-num font-bold text-yellow-400">0.0000 kWh</span>
+            </div>
+          </div>
+
+          <!-- Toggle Switch -->
+          <div class="flex items-center justify-between py-2 border-y border-gray-800/80">
+            <span class="text-sm font-semibold text-gray-400" id="labelOutlet${m.id}">مغلق (OFF)</span>
+            <button id="toggleBtn${m.id}" onclick="toggleOutlet(${m.id})"
+              class="w-14 h-8 rounded-full bg-gray-700 p-1 flex items-center justify-start transition duration-200 focus:outline-none">
+              <div id="toggleBall${m.id}" class="w-6 h-6 rounded-full bg-gray-300 shadow-md"></div>
+            </button>
+          </div>
+
+          <!-- Daily NTP Schedule -->
+          <div class="bg-gray-950/60 rounded-xl p-3 border border-gray-800/70 space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-gray-300 font-semibold"><i class="fa-regular fa-calendar-check text-cyan-400 ml-1"></i>جدولة يومية (NTP)</span>
+              <label class="flex items-center gap-1.5 cursor-pointer text-[11px] text-gray-400">
+                <input type="checkbox" id="schEn${m.id}" onchange="lockScheduleEdit(${m.id})" class="accent-cyan-500 w-3.5 h-3.5">
+                <span>تفعيل</span>
+              </label>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-[11px]">
+              <div>
+                <span class="text-gray-500 block mb-0.5">تشغيل (ON)</span>
+                <input type="time" id="schOn${m.id}" value="08:00" onfocus="lockScheduleEdit(${m.id})"
+                  class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-white font-mono-num">
+              </div>
+              <div>
+                <span class="text-gray-500 block mb-0.5">فصل (OFF)</span>
+                <input type="time" id="schOff${m.id}" value="23:00" onfocus="lockScheduleEdit(${m.id})"
+                  class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-white font-mono-num">
+              </div>
+            </div>
+            <button onclick="saveDailySchedule(${m.id})"
+              class="w-full py-1.5 rounded-lg bg-indigo-900/70 hover:bg-indigo-800 border border-indigo-700 text-indigo-200 text-xs font-bold transition">
+              حفظ الجدول في الـ ESP32
+            </button>
+          </div>
+
+          <!-- Quick Countdown Timer -->
+          <div class="pt-1">
+            <div class="flex items-center justify-between text-xs text-gray-400 mb-1.5">
+              <span>مؤقت سريع (Timer):</span>
+              <span id="timerLabel${m.id}" class="text-cyan-400 font-mono-num text-[11px]">معطل</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <select id="timerSec${m.id}" class="bg-gray-900 border border-gray-700 text-xs rounded-lg px-2 py-1.5 text-gray-300 flex-1">
+                <option value="10">10 ثواني (اختبار)</option>
+                <option value="60">1 دقيقة</option>
+                <option value="300">5 دقائق</option>
+                <option value="1800">30 دقيقة</option>
+                <option value="3600">1 ساعة</option>
+              </select>
+              <button onclick="setOutletTimer(${m.id})" class="px-3 py-1.5 rounded-lg bg-cyan-900/80 hover:bg-cyan-800 border border-cyan-700 text-cyan-300 text-xs font-bold transition">
+                ضبط
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join("");
+    }
 
     function initChart() {
       const ctx = document.getElementById('powerChart').getContext('2d');
@@ -627,213 +419,210 @@
             fill: true,
             tension: 0.35,
             pointBackgroundColor: '#10b981',
-            pointRadius: 4
+            pointRadius: 3
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            y: {
-              beginAtZero: true,
-              grid: { color: 'rgba(255, 255, 255, 0.05)' },
-              ticks: { color: '#9ca3af', font: { family: 'Orbitron' } }
-            },
-            x: {
-              grid: { display: false },
-              ticks: { color: '#9ca3af', font: { family: 'Orbitron' } }
-            }
+            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af', font: { family: 'Orbitron' } } },
+            x: { grid: { display: false }, ticks: { color: '#9ca3af', font: { family: 'Orbitron' } } }
           },
-          plugins: {
-            legend: { labels: { color: '#e5e7eb', font: { family: 'Cairo' } } }
-          }
+          plugins: { legend: { labels: { color: '#e5e7eb', font: { family: 'Cairo' } } } }
         }
       });
     }
 
-    // Connect to MQTT Broker (Rock-Solid TLS)
-    function connectMQTT() {
-      if (typeof Paho === 'undefined') {
-        logMsg("❌ مكتبة MQTT غير متوفرة، جاري إعادة المحاولة...");
-        setTimeout(connectMQTT, 1500);
-        return;
-      }
-
-      if (isConnecting) return;
-      if (client && client.isConnected && client.isConnected()) {
-        updateConnBadge("connected", "متصل بالسحابة (Online)");
-        return;
-      }
-
-      isConnecting = true;
-      // Always generate a fresh client ID on connect to avoid duplicate collision in broker
-      config.clientId = "Web_" + Math.random().toString(36).substr(2, 9);
-
-      logMsg("جاري الاتصال بـ " + config.broker + ":" + config.port + " (SSL=" + config.useSSL + ")...");
-      updateConnBadge("connecting", "جاري الاتصال بالسحابة...");
-
-      try {
-        if (client) {
-          try { client.disconnect(); } catch(e) {}
-        }
-      } catch (e) {}
-
-      client = new Paho.MQTT.Client(config.broker, Number(config.port), config.path, config.clientId);
-
-      client.onConnectionLost = onConnectionLost;
-      client.onMessageArrived = onMessageArrived;
-
-      const options = {
-        useSSL: true,
-        timeout: 10,
-        keepAliveInterval: 60,
-        cleanSession: true,
-        mqttVersion: 4, // MQTT 3.1.1 standard
-        onSuccess: onConnectSuccess,
-        onFailure: onConnectFailure
-      };
-
-      try {
-        client.connect(options);
-      } catch (err) {
-        isConnecting = false;
-        logMsg("❌ خطأ: " + err.message);
-        updateConnBadge("disconnected", "فشل الاتصال");
-        scheduleReconnect();
+    function cleanupOldClient() {
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      if (client) {
+        try {
+          client.onConnectionLost = null;
+          client.onMessageArrived = null;
+          if (client.isConnected()) client.disconnect();
+        } catch (e) {}
+        client = null;
       }
     }
 
-    function onConnectSuccess() {
-      isConnecting = false;
-      logMsg("✅ تم الاتصال بثبات بـ HiveMQ (TLS 8884)!");
-      updateConnBadge("connected", "متصل بالسحابة (Online)");
-      client.subscribe(config.topicStatus, { qos: 0 });
-      logMsg("📥 تم الاشتراك في موضوع الحالة: " + config.topicStatus);
-    }
-
-    function onConnectFailure(response) {
-      isConnecting = false;
-      logMsg("❌ لم يتم الاتصال: " + (response.errorMessage || "انتهت المهلة"));
-      updateConnBadge("disconnected", "انقطع الاتصال - جاري الإعادة");
-      scheduleReconnect();
-    }
-
-    function onConnectionLost(response) {
-      isConnecting = false;
-      if (response.errorCode !== 0) {
-        logMsg("⚠️ فُقد الاتصال المؤقت: " + response.errorMessage);
-      }
-      updateConnBadge("disconnected", "انقطع الاتصال - جاري الإعادة");
-      scheduleReconnect();
-    }
-
-    function scheduleReconnect() {
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      reconnectTimer = setTimeout(() => {
-        connectMQTT();
-      }, 4000);
-    }
-
-    function reconnectManual() {
-      if (reconnectTimer) clearTimeout(reconnectTimer);
+    function manualReconnect() {
       isConnecting = false;
       connectMQTT();
     }
 
-    // Handle Incoming Telemetry Message
-    function onMessageArrived(message) {
+    function connectMQTT() {
+      if (isConnecting) return;
+      if (typeof Paho === 'undefined') {
+        updateConnBadge("disconnected", "فشل تحميل مكتبة MQTT");
+        return;
+      }
+
+      isConnecting = true;
+      cleanupOldClient();
+
+      const freshClientId = "ElectroNovaWeb_" + Math.random().toString(16).slice(2, 10);
+      logMsg(`جاري الاتصال بـ ${config.broker}:${config.port} ...`);
+      updateConnBadge("connecting", "جاري الاتصال...");
+      document.getElementById("lblBrokerFooter").innerText = `${config.broker}:${config.port}`;
+      document.getElementById("lblStatusTopic").innerText = config.topicStatus;
+
+      const currentClient = new Paho.MQTT.Client(config.broker, Number(config.port), config.path, freshClientId);
+      client = currentClient;
+
+      currentClient.onConnectionLost = (res) => {
+        if (client !== currentClient) return;
+        isConnecting = false;
+        logMsg("⚠️ انقطع الاتصال بالسحابة: " + (res.errorMessage || "Timeout"));
+        updateConnBadge("disconnected", "انقطع الاتصال - إعادة المحاولة...");
+        scheduleReconnect(4000);
+      };
+
+      currentClient.onMessageArrived = (msg) => {
+        if (client !== currentClient) return;
+        try {
+          const payload = JSON.parse(msg.payloadString);
+          processTelemetry(payload);
+        } catch (e) {
+          logMsg("⚠️ JSON غير صالح");
+        }
+      };
+
       try {
-        const payload = JSON.parse(message.payloadString);
-        logMsg("📩 بيانات: " + message.payloadString.substring(0, 55) + "...");
-        processTelemetry(payload);
-      } catch (e) {
-        // ignore non-json
+        currentClient.connect({
+          useSSL: config.useSSL,
+          timeout: 8,
+          keepAliveInterval: 45,
+          cleanSession: true,
+          mqttVersion: 4,
+          onSuccess: () => {
+            if (client !== currentClient) return;
+            isConnecting = false;
+            logMsg("✅ متصل بنجاح بـ HiveMQ (" + freshClientId + ")");
+            updateConnBadge("connected", "متصل بالسحابة (Online)");
+            currentClient.subscribe(config.topicStatus);
+          },
+          onFailure: (res) => {
+            if (client !== currentClient) return;
+            isConnecting = false;
+            logMsg("❌ فشل الاتصال: " + (res.errorMessage || "مهلة انتهت"));
+            updateConnBadge("disconnected", "فشل الاتصال - اضغط لإعادة المحاولة");
+            scheduleReconnect(5000);
+          }
+        });
+      } catch (err) {
+        isConnecting = false;
+        updateConnBadge("disconnected", "خطأ اتصال");
+        scheduleReconnect(5000);
       }
     }
 
-    // Process Received Telemetry
+    function scheduleReconnect(ms) {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(() => {
+        if (!client || !client.isConnected()) connectMQTT();
+      }, ms);
+    }
+
     function processTelemetry(data) {
-      // 1. Temperature
+      // NTP Clock
+      if (data.time) {
+        document.getElementById("espClock").innerText = data.time;
+        const badge = document.getElementById("ntpBadge");
+        if (data.ntp) {
+          badge.innerText = "مصر UTC+2";
+          badge.className = "text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800";
+        } else {
+          badge.innerText = "مزامنة...";
+          badge.className = "text-[10px] px-1.5 py-0.5 rounded bg-yellow-950 text-yellow-400";
+        }
+      }
+
+      // Temperature
       if (data.temp_c !== undefined) {
         const temp = parseFloat(data.temp_c);
         document.getElementById("valTemp").innerText = temp.toFixed(1);
         const bar = document.getElementById("barTemp");
-        const percent = Math.min(100, Math.max(0, (temp / 65.0) * 100));
-        bar.style.width = percent + "%";
-
-        if (temp > 60) {
-          bar.className = "bg-red-500 h-full transition-all duration-500";
-        } else if (temp > 45) {
-          bar.className = "bg-amber-500 h-full transition-all duration-500";
-        } else {
-          bar.className = "bg-emerald-500 h-full transition-all duration-500";
-        }
+        bar.style.width = Math.min(100, Math.max(0, (temp / 65.0) * 100)) + "%";
+        bar.className = (temp > 60 ? "bg-red-500" : temp > 45 ? "bg-amber-500" : "bg-emerald-500") + " h-full transition-all duration-500";
       }
 
-      // 2. Total Amps & Watts
+      // Total Amps & Watts
       if (data.total_amps !== undefined) {
         const amps = parseFloat(data.total_amps);
         document.getElementById("valAmps").innerText = amps.toFixed(1);
         const barAmps = document.getElementById("barAmps");
-        const ampPercent = Math.min(100, (amps / 16.0) * 100);
-        barAmps.style.width = ampPercent + "%";
-        if (amps > 15.0) {
-          barAmps.className = "bg-red-500 h-full transition-all duration-500";
-        } else {
-          barAmps.className = "bg-cyan-500 h-full transition-all duration-500";
-        }
+        bar.style.width = Math.min(100, (amps / 16.0) * 100) + "%";
+        bar.className = (amps > 15 ? "bg-red-500" : "bg-cyan-500") + " h-full transition-all duration-500";
       }
 
       if (data.total_w !== undefined) {
-        const watts = parseFloat(data.total_w);
-        document.getElementById("valWatts").innerText = Math.round(watts);
-        lastWatts = watts;
+        const watts = Math.round(parseFloat(data.total_w));
+        document.getElementById("valWatts").innerText = watts;
         updateChart(watts);
-        calculateEnergy(watts);
       }
 
-      // 3. Alerts
-      const alertBanner = document.getElementById("alertBanner");
-      const alertMsg = document.getElementById("alertMsg");
+      // Cumulative kWh & Cost directly from ESP32
+      if (data.total_kwh !== undefined) {
+        document.getElementById("valKwh").innerText = parseFloat(data.total_kwh).toFixed(4);
+      }
+      if (data.cost_egp !== undefined) {
+        document.getElementById("valCost").innerText = parseFloat(data.cost_egp).toFixed(2);
+      }
+
+      // Alert Banner
+      const banner = document.getElementById("alertBanner");
+      const msgEl  = document.getElementById("alertMsg");
       if (data.alert && data.alert !== "OK") {
-        alertBanner.classList.remove("hidden");
+        banner.classList.remove("hidden");
         if (data.alert === "OVERHEAT_SHUTDOWN") {
-          alertMsg.innerText = "🚨 إغلاق طوارئ: حرارة المشترك تجاوزت 65°C! تم فصل جميع المخارج لحماية المنشأة.";
+          msgEl.innerText = "🚨 إغلاق طوارئ: الحرارة تجاوزت 65°C! تم فصل جميع المخارج.";
         } else if (data.alert.startsWith("LOAD_SHEDDING")) {
-          alertMsg.innerText = "⚡ تحذير زيادة الحمل (أكثر من 16A)! قام النظام بفصل " + data.alert.replace("LOAD_SHEDDING_", "") + " ذات الأولوية الأقل لمنع احتراق الأسلاك.";
+          msgEl.innerText = "⚡ زيادة حمل (> 16A): تم فصل " + data.alert.replace("LOAD_SHEDDING_", "") + " تلقائياً.";
         } else {
-          alertMsg.innerText = "تنبيه نظام: " + data.alert;
+          msgEl.innerText = "تنبيه: " + data.alert;
         }
       } else {
-        alertBanner.classList.add("hidden");
+        banner.classList.add("hidden");
       }
 
-      // 4. Outlets Status Sync
-      if (data.outlets && Array.isArray(data.outlets)) {
-        data.outlets.forEach((outlet, idx) => {
+      // Outlets Status, Per-Outlet kWh & Schedules
+      const now = Date.now();
+      if (Array.isArray(data.outlets)) {
+        data.outlets.forEach((o, idx) => {
           const id = idx + 1;
-          const st = outlet.state;
-          outletStates[idx] = st;
-          
-          const amps = outlet.amps || 0.0;
-          const watts = Math.round(amps * 220);
+          const amps = parseFloat(o.amps || 0);
+          const kwh  = parseFloat(o.kwh || 0);
 
-          document.getElementById("ampsOutlet" + id).innerText = amps.toFixed(1) + " A";
-          document.getElementById("wattsOutlet" + id).innerText = watts + " W";
+          document.getElementById("ampsOutlet" + id).innerText  = amps.toFixed(1) + " A";
+          document.getElementById("wattsOutlet" + id).innerText = Math.round(amps * 220) + " W";
+          document.getElementById("kwhOutlet" + id).innerText   = kwh.toFixed(4) + " kWh";
 
-          updateOutletUI(id, st);
+          if (now > pendingStateUntil[idx] || o.state === outletStates[idx]) {
+            outletStates[idx] = Boolean(o.state);
+            updateOutletUI(id, outletStates[idx]);
+          }
+
+          if (o.sch && now > scheduleEditLockUntil[idx]) {
+            const enEl  = document.getElementById("schEn" + id);
+            const onEl  = document.getElementById("schOn" + id);
+            const offEl = document.getElementById("schOff" + id);
+            if (document.activeElement !== onEl && document.activeElement !== offEl) {
+              enEl.checked = Boolean(o.sch.en);
+              if (o.sch.on)  onEl.value  = o.sch.on;
+              if (o.sch.off) offEl.value = o.sch.off;
+            }
+          }
         });
       }
     }
 
-    // Instant Responsive Switch Update (Both Visual & Data)
     function updateOutletUI(id, state) {
-      const card = document.getElementById("cardOutlet" + id);
-      const dot = document.getElementById("dotOutlet" + id);
+      const card  = document.getElementById("cardOutlet" + id);
+      const dot   = document.getElementById("dotOutlet" + id);
       const label = document.getElementById("labelOutlet" + id);
-      const track = document.getElementById("toggleTrack" + id);
-
-      if (!card || !track) return;
+      const btn   = document.getElementById("toggleBtn" + id);
+      const ball  = document.getElementById("toggleBall" + id);
 
       if (state) {
         card.classList.add("border-emerald-500/50", "neon-border-green");
@@ -841,275 +630,179 @@
         dot.className = "w-3 h-3 rounded-full bg-emerald-400 shadow-md shadow-emerald-400/50";
         label.innerText = "يعمل (ON)";
         label.className = "text-sm font-bold text-emerald-400";
-        track.className = "switch-track on";
+        btn.className = "w-14 h-8 rounded-full bg-emerald-500 p-1 flex items-center justify-end transition duration-200 focus:outline-none";
+        ball.className = "w-6 h-6 rounded-full bg-white shadow-md";
       } else {
         card.classList.remove("border-emerald-500/50", "neon-border-green");
         card.classList.add("border-transparent");
         dot.className = "w-3 h-3 rounded-full bg-gray-600";
         label.innerText = "مغلق (OFF)";
         label.className = "text-sm font-semibold text-gray-400";
-        track.className = "switch-track off";
+        btn.className = "w-14 h-8 rounded-full bg-gray-700 p-1 flex items-center justify-start transition duration-200 focus:outline-none";
+        ball.className = "w-6 h-6 rounded-full bg-gray-300 shadow-md";
       }
     }
 
-    // Toggle Single Outlet (INSTANT OPTIMISTIC UI)
     function toggleOutlet(id) {
-      const newState = !outletStates[id - 1];
-      
-      // 1. Instant local visual update
-      outletStates[id - 1] = newState;
+      const idx = id - 1;
+      const newState = !outletStates[idx];
+      if (!publishCmd({ outlet: id, state: newState })) return;
+      outletStates[idx] = newState;
+      pendingStateUntil[idx] = Date.now() + 3000;
       updateOutletUI(id, newState);
-      
-      // 2. Publish MQTT command
-      const cmd = {
-        outlet: id,
-        state: newState
-      };
-      publishCmd(cmd);
-      logMsg("📤 أمر فوري لمخرج " + id + ": " + (newState ? "تشغيل (ON)" : "إيقاف (OFF)"));
+      logMsg(`📤 مخرج ${id} ⬅ ${newState ? "تشغيل" : "فصل"}`);
     }
 
-    // Master All ON / OFF (INSTANT OPTIMISTIC UI)
     function sendMasterCommand(state) {
-      // 1. Instant local visual update for all 4 outlets
+      if (!publishCmd({ all: state })) return;
+      const lock = Date.now() + 3000;
       for (let i = 0; i < 4; i++) {
         outletStates[i] = state;
+        pendingStateUntil[i] = lock;
         updateOutletUI(i + 1, state);
       }
-      
-      // 2. Publish master command
-      const cmd = { all: state };
-      publishCmd(cmd);
-      logMsg("📤 أمر كلي للمشترك: " + (state ? "تشغيل الكل" : "فصل الكل"));
+      logMsg(`📤 أمر كلي ⬅ ${state ? "تشغيل الكل" : "فصل الكل"}`);
     }
 
-    // Set Countdown Timer
+    function lockScheduleEdit(id) {
+      scheduleEditLockUntil[id - 1] = Date.now() + 15000;
+    }
+
+    function saveDailySchedule(id) {
+      const enabled = document.getElementById("schEn" + id).checked;
+      const onTime  = document.getElementById("schOn" + id).value || "08:00";
+      const offTime = document.getElementById("schOff" + id).value || "23:00";
+      if (!publishCmd({ schedule: id, enabled, on: onTime, off: offTime })) return;
+      scheduleEditLockUntil[id - 1] = Date.now() + 3000;
+      logMsg(`📅 حفظ جدول مخرج ${id}: ${enabled ? "مفعّل" : "معطّل"} (${onTime} ⬅ ${offTime})`);
+    }
+
     function setOutletTimer(id) {
       const sec = parseInt(document.getElementById("timerSec" + id).value);
       const targetState = !outletStates[id - 1];
-      const cmd = {
-        outlet: id,
-        state: targetState,
-        delaySec: sec
-      };
-      publishCmd(cmd);
-      
+      if (!publishCmd({ outlet: id, state: targetState, delaySec: sec })) return;
+
       const label = document.getElementById("timerLabel" + id);
-      let remain = sec;
-      label.innerText = (targetState ? "تشغيل" : "فصل") + " خلال " + remain + "ث";
+      label.innerText = `${targetState ? "تشغيل" : "فصل"} بعد ${sec}ث`;
       label.classList.add("text-yellow-400");
-
-      const interval = setInterval(() => {
-        remain--;
-        if (remain <= 0) {
-          clearInterval(interval);
-          label.innerText = "معطل";
-          label.classList.remove("text-yellow-400");
-          outletStates[id - 1] = targetState;
-          updateOutletUI(id, targetState);
-        } else {
-          label.innerText = (targetState ? "تشغيل" : "فصل") + " خلال " + remain + "ث";
-        }
-      }, 1000);
-
-      logMsg("⏰ تم ضبط مؤقت للمخرج " + id + " (" + sec + " ث)");
+      setTimeout(() => {
+        label.innerText = "معطل";
+        label.classList.remove("text-yellow-400");
+      }, sec * 1000);
+      logMsg(`⏰ مؤقت مخرج ${id}: ${sec} ثانية`);
     }
 
-    // Publish JSON command over MQTT
+    function resetEnergy() {
+      if (!confirm("هل تريد تصفير عداد الطاقة التراكمية (kWh) داخل الـ ESP32؟")) return;
+      if (publishCmd({ resetEnergy: true })) {
+        logMsg("🔄 تم إرسال أمر تصفير عداد الطاقة للـ ESP32");
+      }
+    }
+
     function publishCmd(obj) {
       if (!client || !client.isConnected()) {
-        logMsg("⚠️ جاري إرسال الأمر وإعادة الاتصال...");
-        connectMQTT();
-        setTimeout(() => {
-          if (client && client.isConnected()) {
-            const message = new Paho.MQTT.Message(JSON.stringify(obj));
-            message.destinationName = config.topicCmd;
-            client.send(message);
-          }
-        }, 1000);
-        return;
+        logMsg("⚠️ غير متصل بالسحابة حالياً — جاري إعادة الاتصال...");
+        manualReconnect();
+        return false;
       }
       const message = new Paho.MQTT.Message(JSON.stringify(obj));
       message.destinationName = config.topicCmd;
       client.send(message);
+      return true;
     }
 
-    // Real-Time Cumulative Energy Calculation
-    function calculateEnergy(currentWatts) {
-      const nowSec = Date.now() / 1000;
-      const deltaHours = (nowSec - lastTimeSec) / 3600;
-      lastTimeSec = nowSec;
-
-      if (deltaHours > 0 && currentWatts > 0) {
-        totalKwh += (currentWatts * deltaHours) / 1000.0;
-        document.getElementById("valKwh").innerText = totalKwh.toFixed(4);
-        const cost = totalKwh * EGP_PER_KWH;
-        document.getElementById("valCost").innerText = cost.toFixed(2);
-      }
-    }
-
-    // Update Live Chart
     function updateChart(watts) {
       if (!powerChart) return;
       const now = new Date();
-      const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
-                      now.getMinutes().toString().padStart(2, '0') + ':' + 
-                      now.getSeconds().toString().padStart(2, '0');
-
-      powerChart.data.labels.push(timeStr);
+      const t = now.toTimeString().slice(0, 8);
+      powerChart.data.labels.push(t);
       powerChart.data.datasets[0].data.push(watts);
-
-      if (powerChart.data.labels.length > maxChartDataPoints) {
+      if (powerChart.data.labels.length > maxChartPoints) {
         powerChart.data.labels.shift();
         powerChart.data.datasets[0].data.shift();
       }
       powerChart.update('none');
     }
 
-    // Voice Simulation via Web Speech API
     let recognition = null;
     function initSpeech() {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
         document.getElementById("btnVoice").disabled = true;
         document.getElementById("voiceStatus").innerText = "المتصفح لا يدعم الصوت";
         return;
       }
-
-      recognition = new SpeechRecognition();
+      recognition = new SR();
       recognition.continuous = false;
       recognition.lang = 'ar-EG';
-      recognition.interimResults = false;
-
       recognition.onstart = () => {
         document.getElementById("voiceStatus").innerText = "جاري الاستماع...🎙️";
         document.getElementById("btnVoice").classList.add("bg-red-950", "border-red-500", "text-red-300");
       };
-
       recognition.onend = () => {
         document.getElementById("voiceStatus").innerText = "تحدث الآن (صوتياً)";
         document.getElementById("btnVoice").classList.remove("bg-red-950", "border-red-500", "text-red-300");
       };
-
-      recognition.onresult = (event) => {
-        const text = event.results[0][0].transcript.toLowerCase();
-        logMsg("🎤 صوت تم التقاطه: \"" + text + "\"");
-        handleVoiceCommandText(text);
+      recognition.onresult = (e) => {
+        const txt = e.results[0][0].transcript.toLowerCase();
+        logMsg(`🎤 صوت: "${txt}"`);
+        const isOff = txt.includes("اطفي") || txt.includes("اقفل") || txt.includes("فصل") || txt.includes("off");
+        if (txt.includes("الكل") || txt.includes("all")) {
+          sendMasterCommand(!isOff);
+        } else if (txt.includes("واحد") || txt.includes("1")) {
+          outletStates[0] = isOff; toggleOutlet(1);
+        } else if (txt.includes("اثنين") || txt.includes("اتنين") || txt.includes("2")) {
+          outletStates[1] = isOff; toggleOutlet(2);
+        } else if (txt.includes("تلات") || txt.includes("ثلاث") || txt.includes("3")) {
+          outletStates[2] = isOff; toggleOutlet(3);
+        } else if (txt.includes("اربع") || txt.includes("أربع") || txt.includes("4")) {
+          outletStates[3] = isOff; toggleOutlet(4);
+        }
       };
     }
 
     function toggleSpeechRecognition() {
       if (!recognition) initSpeech();
       if (!recognition) return;
-      try {
-        recognition.start();
-      } catch (e) {
-        recognition.stop();
-      }
+      try { recognition.start(); } catch (e) { recognition.stop(); }
     }
 
-    function handleVoiceCommandText(cmd) {
-      if (cmd.includes("شغل الكل") || cmd.includes("all on") || cmd.includes("افتح الكل")) {
-        sendMasterCommand(true);
-      } else if (cmd.includes("اطفي الكل") || cmd.includes("all off") || cmd.includes("فصل الكل") || cmd.includes("اقفل الكل")) {
-        sendMasterCommand(false);
-      } else if (cmd.includes("واحد") || cmd.includes("1")) {
-        if (cmd.includes("اطفي") || cmd.includes("اقفل") || cmd.includes("off")) {
-          outletStates[0] = false;
-          updateOutletUI(1, false);
-          publishCmd({outlet: 1, state: false});
-        } else {
-          outletStates[0] = true;
-          updateOutletUI(1, true);
-          publishCmd({outlet: 1, state: true});
-        }
-      } else if (cmd.includes("اثنين") || cmd.includes("اتنين") || cmd.includes("2")) {
-        if (cmd.includes("اطفي") || cmd.includes("اقفل") || cmd.includes("off")) {
-          outletStates[1] = false;
-          updateOutletUI(2, false);
-          publishCmd({outlet: 2, state: false});
-        } else {
-          outletStates[1] = true;
-          updateOutletUI(2, true);
-          publishCmd({outlet: 2, state: true});
-        }
-      } else if (cmd.includes("تلاتة") || cmd.includes("ثلاثة") || cmd.includes("3")) {
-        if (cmd.includes("اطفي") || cmd.includes("اقفل") || cmd.includes("off")) {
-          outletStates[2] = false;
-          updateOutletUI(3, false);
-          publishCmd({outlet: 3, state: false});
-        } else {
-          outletStates[2] = true;
-          updateOutletUI(3, true);
-          publishCmd({outlet: 3, state: true});
-        }
-      } else if (cmd.includes("اربعة") || cmd.includes("أربعة") || cmd.includes("4")) {
-        if (cmd.includes("اطفي") || cmd.includes("اقفل") || cmd.includes("off")) {
-          outletStates[3] = false;
-          updateOutletUI(4, false);
-          publishCmd({outlet: 4, state: false});
-        } else {
-          outletStates[3] = true;
-          updateOutletUI(4, true);
-          publishCmd({outlet: 4, state: true});
-        }
-      }
-    }
-
-    // UI Helpers & Badges
     function updateConnBadge(status, text) {
       const badge = document.getElementById("connBadge");
-      const dot = document.getElementById("connDot");
-      const label = document.getElementById("connText");
-      if (!badge || !label) return;
-
-      label.innerText = text;
-
-      if (status === "connected") {
-        badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-700/50 text-emerald-400 text-xs font-semibold cursor-pointer transition hover:scale-105 active:scale-95";
-        if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse";
-      } else if (status === "connecting") {
-        badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-950/60 border border-yellow-700/50 text-yellow-400 text-xs font-semibold cursor-pointer transition hover:scale-105 active:scale-95";
-        if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-yellow-400 animate-ping";
-      } else {
-        badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-950/60 border border-red-700/50 text-red-400 text-xs font-semibold cursor-pointer transition hover:scale-105 active:scale-95";
-        if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-red-400";
-      }
+      const dot   = document.getElementById("connDot");
+      document.getElementById("connText").innerText = text;
+      const styles = {
+        connected:    ["bg-emerald-950/60 border-emerald-700/50 text-emerald-400", "bg-emerald-400 animate-pulse"],
+        connecting:   ["bg-yellow-950/60 border-yellow-700/50 text-yellow-400",    "bg-yellow-400 animate-ping"],
+        disconnected: ["bg-red-950/60 border-red-700/50 text-red-400",             "bg-red-400"]
+      }[status];
+      badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold cursor-pointer transition hover:scale-105 " + styles[0];
+      dot.className   = "w-2.5 h-2.5 rounded-full " + styles[1];
     }
 
     function logMsg(msg) {
-      const consoleBox = document.getElementById("logConsole");
-      if (!consoleBox) return;
-      const d = document.createElement("div");
-      const now = new Date().toLocaleTimeString();
-      d.innerHTML = `<span class="text-gray-500">[${now}]</span> ${msg}`;
-      consoleBox.appendChild(d);
-      consoleBox.scrollTop = consoleBox.scrollHeight;
+      const box = document.getElementById("logConsole");
+      const div = document.createElement("div");
+      div.innerHTML = `<span class="text-gray-500">[${new Date().toLocaleTimeString()}]</span> ${msg}`;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
     }
 
-    function clearLogs() {
-      const consoleBox = document.getElementById("logConsole");
-      if (consoleBox) consoleBox.innerHTML = "";
-    }
-
-    // Config Modal
-    function toggleConfigModal() {
-      const modal = document.getElementById("configModal");
-      modal.classList.toggle("hidden");
-    }
+    function clearLogs() { document.getElementById("logConsole").innerHTML = ""; }
+    function toggleConfigModal() { document.getElementById("configModal").classList.toggle("hidden"); }
 
     function saveAndReconnectMQTT() {
-      config.broker = document.getElementById("cfgBroker").value.trim();
-      config.port = parseInt(document.getElementById("cfgPort").value);
+      config.broker      = document.getElementById("cfgBroker").value.trim();
+      config.port        = parseInt(document.getElementById("cfgPort").value);
+      config.useSSL      = document.getElementById("cfgSsl").value === "true";
       config.topicStatus = document.getElementById("cfgTopicStatus").value.trim();
-      config.topicCmd = document.getElementById("cfgTopicCmd").value.trim();
-
+      config.topicCmd    = document.getElementById("cfgTopicCmd").value.trim();
       toggleConfigModal();
-      connectMQTT();
+      manualReconnect();
     }
 
-    // Auto-boot on load
     window.addEventListener("DOMContentLoaded", () => {
+      renderOutletCards();
       initChart();
       initSpeech();
       connectMQTT();
