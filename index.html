@@ -501,6 +501,9 @@
             logMsg("✅ متصل بنجاح بـ HiveMQ (" + freshClientId + ")");
             updateConnBadge("connected", "متصل بالسحابة (Online)");
             currentClient.subscribe(config.topicStatus);
+            // Auto-sync real-time clock to ESP32 immediately on connect
+            const nowEpoch = Math.floor(Date.now() / 1000) + (2 * 3600); // Egypt GMT+2
+            publishCmd({ setEpoch: nowEpoch });
           },
           onFailure: (res) => {
             if (client !== currentClient) return;
